@@ -631,7 +631,7 @@ def plot_category_summary(summary: pd.DataFrame) -> None:
     fig1, ax1 = plt.subplots(figsize=(12, 6.8), facecolor="white")
     width = 0.34
     ax1.bar(x - width / 2, summary["品类目标需求_kg"], width, color="#cee5df", alpha=0.8, label="目标需求")
-    ax1.bar(x + width / 2, summary["预测销量_kg"], width, color=["#ead9ce","#afc1d1","#cae3dd","#eee8d9","#cbdab6","#ebd8d0"], alpha=0.86, label="优化后预测销量")
+    ax1.bar(x + width / 2, summary["预测销量_kg"], width, color=["#ead9ce","#afc1d1","#f5f0da","#eee8d9","#cbdab6","#ebd8d0"], alpha=0.86, label="优化后预测销量")
     ax1.set_ylabel("销量（千克）")
     ax1.set_xticks(x, summary["分类名称"])
     ax1.set_title("各品类市场需求满足情况", fontsize=18, pad=16)
