@@ -645,7 +645,7 @@ def plot_category_summary(summary: pd.DataFrame) -> None:
 
     # 图 2-2：各品类预测经营利润
     fig2, ax2 = plt.subplots(figsize=(11, 6.8), facecolor="white")
-    ax2.bar(x, summary["预测经营利润_元"], color=colors, alpha=0.86, width=0.58)
+    ax2.bar(x, summary["预测经营利润_元"], color=["#F5A8AA","#F6C4B8","#FBD5C4","#C8DCD6","#8EC4BE","#D2E8EE"], alpha=0.86, width=0.58)
     ax2.set_ylabel("预测经营利润（元）")
     ax2.set_xticks(x, summary["分类名称"])
     ax2.set_title("各品类预测经营利润", fontsize=18, pad=16)
