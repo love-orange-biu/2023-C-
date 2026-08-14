@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import font_manager, patches
+from matplotlib.colors import LinearSegmentedColormap
 
 
 # =====================================================================
@@ -35,6 +36,44 @@ MONTE_CARLO_SEED = 20260814
 WEIGHT_PERTURBATION = 0.20
 SCORE_PERTURBATION = 0.50
 
+# =====================================================================
+# 论文图统一低饱和、高透明度配色
+# =====================================================================
+# 色彩原则：
+# 1. 低饱和：避免大红、大蓝等高刺激颜色；
+# 2. 高透明：主体填充保持 0.50~0.68 的透明度；
+# 3. 自然过渡：以雾蓝、灰绿、燕麦黄、豆沙粉、浅薰衣草为主；
+# 4. 统一风格：四张图及 Excel 批次颜色保持一致。
+
+PAPER_BG = "#FBFAF7"       # 温和米白背景
+TEXT_DARK = "#4E4A46"      # 深灰褐文字
+TEXT_MID = "#6F6963"       # 中灰褐文字
+GRID_COLOR = "#D8D4CD"     # 淡灰米色网格
+EDGE_COLOR = "#8E8881"     # 柔和边框
+
+BATCH_COLORS = {
+    "第一批—立即建设": "#C79A9A",   # 低饱和豆沙粉
+    "第二批—近期建设": "#D8BE8D",   # 燕麦金
+    "第三批—持续完善": "#9FB8C9",   # 雾霾蓝
+}
+
+FLOW_COLORS = [
+    "#A8BED0",  # 雾蓝
+    "#D8B995",  # 杏仁沙
+    "#A7C0B2",  # 鼠尾草绿
+    "#B7AEC8",  # 浅薰衣草
+]
+
+MC_BAR_COLOR = "#8FAFC3"   # 蒙特卡洛柱图：灰蓝
+MC_POINT_COLOR = "#C59A9A" # 蒙特卡洛误差线：灰粉
+
+# 影响矩阵：米白 -> 灰绿 -> 雾蓝，变化柔和
+IMPACT_CMAP = LinearSegmentedColormap.from_list(
+    "soft_natural",
+    ["#F7F3EA", "#E5E4D3", "#D2DDD2", "#B8CFC3", "#9BBDB6", "#7FA5AE"],
+    N=256,
+)
+
 
 def configure_chinese_font() -> str:
     """显式注册项目中的微软雅黑，保证图片可直接用于论文。"""
@@ -49,10 +88,13 @@ def configure_chinese_font() -> str:
             "axes.unicode_minus": False,
             "figure.dpi": 120,
             "savefig.dpi": 320,
-            "axes.edgecolor": "#666666",
-            "axes.labelcolor": "#444444",
-            "xtick.color": "#555555",
-            "ytick.color": "#555555",
+            "axes.edgecolor": EDGE_COLOR,
+            "axes.labelcolor": TEXT_DARK,
+            "xtick.color": TEXT_MID,
+            "ytick.color": TEXT_MID,
+            "text.color": TEXT_DARK,
+            "figure.facecolor": PAPER_BG,
+            "axes.facecolor": PAPER_BG,
         }
     )
     return font_name
@@ -581,37 +623,80 @@ def build_score_notes() -> pd.DataFrame:
 
 
 def save_figure(fig: plt.Figure, filename: str) -> None:
-    fig.savefig(OUTPUT_DIR / filename, bbox_inches="tight", facecolor="white")
+    fig.savefig(OUTPUT_DIR / filename, bbox_inches="tight", facecolor=PAPER_BG)
     plt.close(fig)
 
 
 def plot_priority(priority_df: pd.DataFrame) -> None:
     data = priority_df.sort_values("综合优先级得分", ascending=True)
-    colors = {
-        "第一批—立即建设": "#C85C5C",
-        "第二批—近期建设": "#D9A441",
-        "第三批—持续完善": "#7FA9C9",
-    }
-    fig, ax = plt.subplots(figsize=(11, 7.5), facecolor="white")
+
+    fig, ax = plt.subplots(figsize=(11, 7.5), facecolor=PAPER_BG)
+    ax.set_facecolor(PAPER_BG)
+
     bars = ax.barh(
         data["数据主题"],
         data["综合优先级得分"],
-        color=[colors[x] for x in data["实施批次"]],
-        alpha=0.88,
-        edgecolor="white",
+        color=[BATCH_COLORS[x] for x in data["实施批次"]],
+        alpha=0.62,
+        edgecolor=[BATCH_COLORS[x] for x in data["实施批次"]],
+        linewidth=0.8,
     )
-    ax.bar_label(bars, fmt="%.1f", padding=4, fontsize=9, color="#555555")
+
+    ax.bar_label(
+        bars,
+        fmt="%.1f",
+        padding=5,
+        fontsize=9,
+        color=TEXT_MID,
+    )
     ax.set_xlim(0, 105)
     ax.set_xlabel("综合评价得分（0—100）")
     ax.set_title("第四问：数据采集综合得分与实施批次", fontsize=18, pad=16)
-    ax.grid(axis="x", color="#D8D8D8", alpha=0.55)
+
+    ax.grid(
+        axis="x",
+        color=GRID_COLOR,
+        alpha=0.42,
+        linewidth=0.8,
+        linestyle="--",
+    )
     ax.set_axisbelow(True)
+
+    # 弱化边框，使整图更轻盈
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color(EDGE_COLOR)
+    ax.spines["bottom"].set_color(EDGE_COLOR)
+
     handles = [
-        patches.Patch(color=colors["第一批—立即建设"], label="第一批—立即建设"),
-        patches.Patch(color=colors["第二批—近期建设"], label="第二批—近期建设"),
-        patches.Patch(color=colors["第三批—持续完善"], label="第三批—持续完善"),
+        patches.Patch(
+            facecolor=BATCH_COLORS["第一批—立即建设"],
+            edgecolor=BATCH_COLORS["第一批—立即建设"],
+            alpha=0.62,
+            label="第一批—立即建设",
+        ),
+        patches.Patch(
+            facecolor=BATCH_COLORS["第二批—近期建设"],
+            edgecolor=BATCH_COLORS["第二批—近期建设"],
+            alpha=0.62,
+            label="第二批—近期建设",
+        ),
+        patches.Patch(
+            facecolor=BATCH_COLORS["第三批—持续完善"],
+            edgecolor=BATCH_COLORS["第三批—持续完善"],
+            alpha=0.62,
+            label="第三批—持续完善",
+        ),
     ]
-    ax.legend(handles=handles, frameon=False, ncol=3, loc="lower center", bbox_to_anchor=(0.5, -0.16))
+
+    ax.legend(
+        handles=handles,
+        frameon=False,
+        ncol=3,
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.16),
+        labelcolor=TEXT_DARK,
+    )
     fig.subplots_adjust(left=0.30, right=0.96, top=0.92, bottom=0.14)
     save_figure(fig, "图4-1_数据采集优先级.png")
 
@@ -619,82 +704,177 @@ def plot_priority(priority_df: pd.DataFrame) -> None:
 def plot_impact_matrix(priority_df: pd.DataFrame) -> None:
     data = priority_df.sort_values("综合优先级得分", ascending=False)
     matrix = data[["问题1影响", "问题2影响", "问题3影响"]].to_numpy(float)
-    fig, ax = plt.subplots(figsize=(8.8, 7.2), facecolor="white")
-    image = ax.imshow(matrix, cmap="YlGnBu", vmin=0, vmax=5, aspect="auto")
+
+    fig, ax = plt.subplots(figsize=(8.8, 7.2), facecolor=PAPER_BG)
+    ax.set_facecolor(PAPER_BG)
+
+    image = ax.imshow(
+        matrix,
+        cmap=IMPACT_CMAP,
+        vmin=0,
+        vmax=5,
+        aspect="auto",
+        alpha=0.92,
+    )
+
     ax.set_xticks(np.arange(3), QUESTION_LABELS)
     ax.set_yticks(np.arange(len(data)), data["数据主题"])
     ax.set_title("数据需求对前三问的影响矩阵", fontsize=18, pad=16)
+
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
-            text_color = "white" if matrix[i, j] >= 3.5 else "#333333"
-            ax.text(j, i, f"{int(matrix[i, j])}", ha="center", va="center", color=text_color, fontsize=11)
+            # 低饱和热力图下使用深灰文字即可，避免纯白文字突兀
+            text_color = "#F7F5F1" if matrix[i, j] >= 4.5 else TEXT_DARK
+            ax.text(
+                j,
+                i,
+                f"{int(matrix[i, j])}",
+                ha="center",
+                va="center",
+                color=text_color,
+                fontsize=11,
+                weight="semibold",
+            )
+
     cbar = fig.colorbar(image, ax=ax, fraction=0.035, pad=0.04)
-    cbar.set_label("影响程度（0—5分）")
+    cbar.set_label("影响程度（0—5分）", color=TEXT_DARK)
+    cbar.ax.tick_params(colors=TEXT_MID)
+    cbar.outline.set_edgecolor(EDGE_COLOR)
+
     ax.set_xlabel("前三问")
     ax.grid(False)
+
+    for spine in ax.spines.values():
+        spine.set_color(EDGE_COLOR)
+        spine.set_alpha(0.55)
+
     fig.subplots_adjust(left=0.34, right=0.90, top=0.92, bottom=0.10)
     save_figure(fig, "图4-2_数据对前三问影响矩阵.png")
 
 
 def plot_data_loop() -> None:
-    fig, ax = plt.subplots(figsize=(13, 4.6), facecolor="white")
+    fig, ax = plt.subplots(figsize=(13, 4.6), facecolor=PAPER_BG)
+    ax.set_facecolor(PAPER_BG)
     ax.set_xlim(0, 13)
     ax.set_ylim(0, 4.2)
     ax.axis("off")
+
     blocks = [
-        (0.35, "多源数据采集", "POS / 库存 / 采购\n损耗 / 客流 / 外部因素", "#7FA9C9"),
-        (3.45, "口径与质量校验", "编码匹配、缺失检查\n时间对齐、异常识别", "#DDA66D"),
-        (6.55, "预测与优化决策", "需求预测、价格弹性\n补货定价与损耗控制", "#8DB79E"),
-        (9.65, "执行反馈与滚动更新", "实际售价、销量、报损\n策略误差与试验结果", "#A99BC5"),
+        (0.35, "多源数据采集", "POS / 库存 / 采购\n损耗 / 客流 / 外部因素", FLOW_COLORS[0]),
+        (3.45, "口径与质量校验", "编码匹配、缺失检查\n时间对齐、异常识别", FLOW_COLORS[1]),
+        (6.55, "预测与优化决策", "需求预测、价格弹性\n补货定价与损耗控制", FLOW_COLORS[2]),
+        (9.65, "执行反馈与滚动更新", "实际售价、销量、报损\n策略误差与试验结果", FLOW_COLORS[3]),
     ]
+
     for x, title, subtitle, color in blocks:
         rect = patches.FancyBboxPatch(
-            (x, 1.25), 2.35, 1.75,
+            (x, 1.25),
+            2.35,
+            1.75,
             boxstyle="round,pad=0.05,rounding_size=0.08",
-            linewidth=1.2,
-            edgecolor="#777777",
+            linewidth=1.0,
+            edgecolor=EDGE_COLOR,
             facecolor=color,
-            alpha=0.86,
+            alpha=0.68,
         )
         ax.add_patch(rect)
-        ax.text(x + 1.175, 2.42, title, ha="center", va="center", fontsize=13, color="#333333", weight="bold")
-        ax.text(x + 1.175, 1.78, subtitle, ha="center", va="center", fontsize=10, color="#444444", linespacing=1.45)
+
+        ax.text(
+            x + 1.175,
+            2.42,
+            title,
+            ha="center",
+            va="center",
+            fontsize=13,
+            color=TEXT_DARK,
+            weight="bold",
+        )
+        ax.text(
+            x + 1.175,
+            1.78,
+            subtitle,
+            ha="center",
+            va="center",
+            fontsize=10,
+            color=TEXT_MID,
+            linespacing=1.45,
+        )
+
     for x in [2.78, 5.88, 8.98]:
-        ax.annotate("", xy=(x + 0.48, 2.12), xytext=(x, 2.12), arrowprops={"arrowstyle": "->", "lw": 1.6, "color": "#666666"})
+        ax.annotate(
+            "",
+            xy=(x + 0.48, 2.12),
+            xytext=(x, 2.12),
+            arrowprops={
+                "arrowstyle": "->",
+                "lw": 1.4,
+                "color": TEXT_MID,
+                "alpha": 0.72,
+            },
+        )
+
     ax.annotate(
         "反馈回流",
-        xy=(1.55, 1.18), xytext=(10.75, 0.50),
-        arrowprops={"arrowstyle": "->", "lw": 1.25, "color": "#777777", "connectionstyle": "arc3,rad=0.22"},
-        ha="center", fontsize=11, color="#555555",
+        xy=(1.55, 1.18),
+        xytext=(10.75, 0.50),
+        arrowprops={
+            "arrowstyle": "->",
+            "lw": 1.15,
+            "color": TEXT_MID,
+            "alpha": 0.68,
+            "connectionstyle": "arc3,rad=0.22",
+        },
+        ha="center",
+        fontsize=11,
+        color=TEXT_MID,
     )
+
     ax.set_title("补货与定价的数据闭环：从采集到模型更新", fontsize=18, pad=12)
     save_figure(fig, "图4-3_数据闭环与模型更新流程.png")
 
 
 def plot_monte_carlo(mc_df: pd.DataFrame) -> None:
     data = mc_df.sort_values("基准排名", ascending=False).reset_index(drop=True)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 8), sharey=True, facecolor="white")
 
+    fig, (ax1, ax2) = plt.subplots(
+        1,
+        2,
+        figsize=(15, 8),
+        sharey=True,
+        facecolor=PAPER_BG,
+    )
+    ax1.set_facecolor(PAPER_BG)
+    ax2.set_facecolor(PAPER_BG)
+
+    # 左图：进入前三概率
     bars = ax1.barh(
         data["数据主题"],
         data["进入前三概率"] * 100,
-        color="#6E9EC2",
-        alpha=0.90,
-        edgecolor="white",
+        color=MC_BAR_COLOR,
+        alpha=0.60,
+        edgecolor=MC_BAR_COLOR,
+        linewidth=0.8,
     )
     ax1.bar_label(
         bars,
         labels=[f"{value:.1%}" for value in data["进入前三概率"]],
         padding=4,
         fontsize=9,
-        color="#555555",
+        color=TEXT_MID,
     )
     ax1.set_xlim(0, 105)
     ax1.set_xlabel("进入前三概率（%）")
     ax1.set_title("第一批建设建议的稳定性", fontsize=14, pad=12)
-    ax1.grid(axis="x", color="#D8D8D8", alpha=0.55)
+    ax1.grid(
+        axis="x",
+        color=GRID_COLOR,
+        alpha=0.40,
+        linewidth=0.8,
+        linestyle="--",
+    )
     ax1.set_axisbelow(True)
 
+    # 右图：平均排名与95%区间
     y_positions = np.arange(len(data))
     rank_mean = data["平均排名"].to_numpy(float)
     rank_error = np.vstack(
@@ -703,28 +883,60 @@ def plot_monte_carlo(mc_df: pd.DataFrame) -> None:
             data["排名97.5%分位"].to_numpy(float) - rank_mean,
         ]
     )
+
     ax2.errorbar(
         rank_mean,
         y_positions,
         xerr=rank_error,
         fmt="o",
-        color="#C85C5C",
-        ecolor="#C85C5C",
+        color=MC_POINT_COLOR,
+        ecolor=MC_POINT_COLOR,
         elinewidth=1.5,
         capsize=3,
-        markersize=5,
+        markersize=5.5,
+        alpha=0.72,
+        markerfacecolor=MC_POINT_COLOR,
+        markeredgecolor=MC_POINT_COLOR,
     )
-    ax2.axvline(3.5, color="#888888", linestyle="--", linewidth=0.9, alpha=0.8)
+    ax2.axvline(
+        3.5,
+        color=TEXT_MID,
+        linestyle="--",
+        linewidth=0.9,
+        alpha=0.48,
+    )
     ax2.set_xlim(0.5, 9.5)
     ax2.set_xticks(np.arange(1, 10))
     ax2.set_xlabel("平均排名（越靠左优先级越高，区间越窄越稳定）")
     ax2.set_title("综合排名的波动范围", fontsize=14, pad=12)
-    ax2.grid(axis="x", color="#D8D8D8", alpha=0.55)
+    ax2.grid(
+        axis="x",
+        color=GRID_COLOR,
+        alpha=0.40,
+        linewidth=0.8,
+        linestyle="--",
+    )
     ax2.set_axisbelow(True)
     ax2.tick_params(axis="y", labelleft=False)
 
-    fig.suptitle("                                   数据采集优先级的蒙特卡洛稳健性检验", fontsize=18, y=0.97)
-    fig.subplots_adjust(left=0.30, right=0.97, top=0.88, bottom=0.12, wspace=0.42)
+    for ax in (ax1, ax2):
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_color(EDGE_COLOR)
+        ax.spines["bottom"].set_color(EDGE_COLOR)
+
+    fig.suptitle(
+        "数据采集优先级的蒙特卡洛稳健性检验",
+        fontsize=18,
+        y=0.97,
+    )
+    fig.subplots_adjust(
+        left=0.30,
+        right=0.97,
+        top=0.88,
+        bottom=0.12,
+        wspace=0.42,
+    )
     save_figure(fig, "图4-4_蒙特卡洛稳健性.png")
 
 
@@ -825,7 +1037,7 @@ def beautify_excel(path: Path) -> None:
     from openpyxl.styles import Alignment, Font, PatternFill
 
     wb = load_workbook(path)
-    header_fill = PatternFill("solid", fgColor="4472C4")
+    header_fill = PatternFill("solid", fgColor="839FB3")
     for ws in wb.worksheets:
         ws.freeze_panes = "A2"
         ws.sheet_view.showGridLines = False
@@ -862,9 +1074,9 @@ def beautify_excel(path: Path) -> None:
                     ws.cell(row, score_col).number_format = "0.0"
             if batch_col:
                 batch_fills = {
-                    "第一批—立即建设": "F4CCCC",
-                    "第二批—近期建设": "FFF2CC",
-                    "第三批—持续完善": "D9EAF7",
+                    "第一批—立即建设": "E8D2D2",
+                    "第二批—近期建设": "EEE2C8",
+                    "第三批—持续完善": "D9E4EC",
                 }
                 for row in range(2, ws.max_row + 1):
                     value = ws.cell(row, batch_col).value
