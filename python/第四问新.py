@@ -370,8 +370,14 @@ def score_priority(
             }
         )
     result = pd.DataFrame(rows)
-    result = result.sort_values("综合优先级得分", ascending=False).reset_index(drop=True)
-    result["综合排名"] = np.arange(1, len(result) + 1)
+    # 统一保留6位小数并采用并列排名，避免浮点末位差异导致同分项目被拆到不同批次。
+    result["综合优先级得分"] = result["综合优先级得分"].round(6)
+    result = result.sort_values(
+        ["综合优先级得分", "数据主题"],
+        ascending=[False, True],
+        kind="mergesort",
+    ).reset_index(drop=True)
+    result["综合排名"] = result["综合优先级得分"].rank(method="min", ascending=False).astype(int)
     result["实施批次"] = np.select(
         [result["综合排名"] <= 3, result["综合排名"] <= 6],
         ["第一批—立即建设", "第二批—近期建设"],
@@ -548,9 +554,9 @@ def build_score_notes() -> pd.DataFrame:
             },
             {
                 "指标": "实施批次",
-                "定义/公式": "按综合优先级得分排序，前3名/第4—6名/第7名以后",
+                "定义/公式": "采用并列排名后，排名≤3/4≤排名≤6/排名≥7",
                 "取值范围": "第一批/第二批/第三批",
-                "说明": "第一批立即建设，第二批近期建设，第三批持续完善；批次仅表示落地顺序，不再增加另一套分级。",
+                "说明": "同分项目共享名次并进入同一批次，因此批次数量不强制为3、3、3；批次仅表示落地顺序。",
             },
             {
                 "指标": "蒙特卡洛权重扰动",
@@ -711,7 +717,7 @@ def plot_monte_carlo(mc_df: pd.DataFrame) -> None:
     ax2.axvline(3.5, color="#888888", linestyle="--", linewidth=0.9, alpha=0.8)
     ax2.set_xlim(0.5, 9.5)
     ax2.set_xticks(np.arange(1, 10))
-    ax2.set_xlabel("平均排名及95%区间（越小越稳定）")
+    ax2.set_xlabel("平均排名（越靠左优先级越高，区间越窄越稳定）")
     ax2.set_title("综合排名的波动范围", fontsize=14, pad=12)
     ax2.grid(axis="x", color="#D8D8D8", alpha=0.55)
     ax2.set_axisbelow(True)
@@ -786,7 +792,7 @@ def write_model_note(
         "|---|---:|---:|---:|---:|",
         *impact_rows,
         "",
-        f"按照基准权重，9类数据均具有较高综合建设价值。为给出可执行的实施顺序，按综合得分划分批次：第一批立即建设{first_text}；第二批近期建设{second_text}；第三批持续完善{third_text}。结合本次排序，第一批重点纠正需求观测偏差并完善价格与策略执行反馈；第二批重点补充外生需求因素、真实采购约束和消费关联；第三批重点完善损耗事实、质量异质性和门店运营约束。",
+        f"按照基准权重，9类数据均具有较高综合建设价值。为给出可执行的实施顺序，按综合得分划分批次：第一批立即建设{first_text}；第二批近期建设{second_text}；第三批持续完善{third_text}。同分项目采用并列排名，因此批次数量不强制为3、3、3。结合本次排序，第一批重点纠正需求观测偏差并完善价格与策略执行反馈；第二批重点补充外生需求因素、真实采购约束和消费关联；第三批重点完善损耗事实、质量异质性和门店运营约束。",
         "",
         "## 5. 对前三问的具体帮助",
         "",
