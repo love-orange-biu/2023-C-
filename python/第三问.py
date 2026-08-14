@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -631,8 +630,8 @@ def plot_category_summary(summary: pd.DataFrame) -> None:
     # 图 2-1：品类需求满足情况
     fig1, ax1 = plt.subplots(figsize=(12, 6.8), facecolor="white")
     width = 0.34
-    ax1.bar(x - width / 2, summary["品类目标需求_kg"], width, color="#C8CDD3", alpha=0.8, label="目标需求")
-    ax1.bar(x + width / 2, summary["预测销量_kg"], width, color=colors, alpha=0.86, label="优化后预测销量")
+    ax1.bar(x - width / 2, summary["品类目标需求_kg"], width, color="#E9EDB2", alpha=0.8, label="目标需求")
+    ax1.bar(x + width / 2, summary["预测销量_kg"], width, color=["#C9D98E","#A9D4A5","#DCEAF2","#A7C8CC","#E8D3B6","#E07C72"], alpha=0.86, label="优化后预测销量")
     ax1.set_ylabel("销量（千克）")
     ax1.set_xticks(x, summary["分类名称"])
     ax1.set_title("各品类市场需求满足情况", fontsize=18, pad=16)
@@ -645,7 +644,7 @@ def plot_category_summary(summary: pd.DataFrame) -> None:
 
     # 图 2-2：各品类预测经营利润
     fig2, ax2 = plt.subplots(figsize=(11, 6.8), facecolor="white")
-    ax2.bar(x, summary["预测经营利润_元"], color=["#F5A8AA","#F6C4B8","#FBD5C4","#C8DCD6","#8EC4BE","#D2E8EE"], alpha=0.86, width=0.58)
+    ax2.bar(x, summary["预测经营利润_元"], color=["#e2b8aa","#e0d2cc","#c6d4d4","#ebd9d9","#b2bbd1","#cae3dd"], alpha=0.86, width=0.58)
     ax2.set_ylabel("预测经营利润（元）")
     ax2.set_xticks(x, summary["分类名称"])
     ax2.set_title("各品类预测经营利润", fontsize=18, pad=16)
