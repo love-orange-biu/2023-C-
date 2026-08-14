@@ -642,7 +642,118 @@ def plot_category_summary(summary: pd.DataFrame) -> None:
         ax1.text(i, max(summary.loc[i, "品类目标需求_kg"], summary.loc[i, "预测销量_kg"]) * 1.025, f"{rate:.1%}", ha="center", fontsize=10)
     fig1.tight_layout()
     save_figure(fig1, "图2-1_品类需求满足情况.png")
+    # =========================
+    # 图：各品类预测经营利润（3D柱状图）
+    # =========================
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
+    # 如果你前面已经设置过中文字体，这里可以不用重复写
+    plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+    plt.rcParams['axes.unicode_minus'] = False
+
+    # ===== 这里的数据来源保持和你原来一致 =====
+    # 如果你前面已经有 summary，就直接用 summary
+    # 需要确保 summary 里有这两列：
+    # “品类” 和 “预测经营利润_元”
+
+    cate_names = summary["品类"].astype(str).tolist()
+    profits = summary["预测经营利润_元"].to_numpy(dtype=float)
+
+    # ===== 低饱和、淡雅配色 =====
+    colors = [
+        (0.55, 0.68, 0.80, 0.75),  # 淡蓝
+        (0.85, 0.68, 0.48, 0.75),  # 淡橙
+        (0.62, 0.76, 0.68, 0.75),  # 淡绿
+        (0.82, 0.62, 0.62, 0.75),  # 淡红
+        (0.72, 0.68, 0.82, 0.75),  # 淡紫
+        (0.75, 0.67, 0.58, 0.75),  # 卡其
+    ]
+
+    # 若品类数超过颜色数，自动循环
+    bar_colors = [colors[i % len(colors)] for i in range(len(cate_names))]
+
+    fig = plt.figure(figsize=(11, 7), dpi=150)
+    ax = fig.add_subplot(111, projection='3d')
+
+    # x位置
+    xpos = np.arange(len(cate_names))
+    ypos = np.zeros(len(cate_names))  # 所有柱子放在同一排
+    zpos = np.zeros(len(cate_names))
+
+    dx = np.full(len(cate_names), 0.6)
+    dy = np.full(len(cate_names), 0.5)
+    dz = profits.copy()
+
+    # 处理负值：3D柱状图中负值也能显示，但要调整zpos
+    for i in range(len(dz)):
+        if dz[i] < 0:
+            zpos[i] = dz[i]
+            dz[i] = -dz[i]
+
+    # 画3D柱
+    ax.bar3d(
+        xpos, ypos, zpos,
+        dx, dy, dz,
+        color=bar_colors,
+        shade=True,
+        edgecolor=(0.45, 0.45, 0.45, 0.45),
+        linewidth=0.6
+    )
+
+    # 设置标题和坐标轴
+    ax.set_title("各品类预测经营利润（3D柱状图）", fontsize=18, pad=18)
+    ax.set_zlabel("预测经营利润（元）", fontsize=12, labelpad=10)
+
+    ax.set_xticks(xpos + dx / 2)
+    ax.set_xticklabels(cate_names, fontsize=11, rotation=0)
+
+    # y轴只是为了3D展示，弱化即可
+    ax.set_yticks([])
+    ax.set_ylabel("")
+
+    # 视角
+    ax.view_init(elev=20, azim=-58)
+
+    # 背景面板淡化
+    ax.xaxis.pane.set_facecolor((0.97, 0.97, 0.97, 0.0))
+    ax.yaxis.pane.set_facecolor((0.97, 0.97, 0.97, 0.0))
+    ax.zaxis.pane.set_facecolor((0.97, 0.97, 0.97, 0.0))
+
+    # 网格线淡化
+    ax.grid(True)
+    for axis in [ax.xaxis, ax.yaxis, ax.zaxis]:
+        axis._axinfo["grid"]['color'] = (0.78, 0.78, 0.78, 0.35)
+        axis._axinfo["grid"]['linestyle'] = '-'
+
+    # 数值标注
+    for i, val in enumerate(profits):
+        x_text = xpos[i] + dx[i] / 2
+        y_text = ypos[i] + dy[i] / 2
+
+        if val >= 0:
+            z_text = val + max(abs(profits)) * 0.02
+            va = 'bottom'
+        else:
+            z_text = val - max(abs(profits)) * 0.06
+            va = 'top'
+
+        ax.text(
+            x_text, y_text, z_text,
+            f"{val:.1f}",
+            ha='center', va=va, fontsize=10, color="#333333"
+        )
+
+    plt.tight_layout()
+
+    # 保存图片
+    save_path = os.path.join(output_dir, "各品类预测经营利润_3D柱状图.png")
+    plt.savefig(save_path, bbox_inches='tight', facecolor='white')
+    plt.show()
+
+    print(f"已保存：{save_path}")
     # =========================================================
     # 图 2-2：各品类预测经营利润 —— 3D柱状图
     # =========================================================
