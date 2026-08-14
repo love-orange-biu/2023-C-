@@ -645,19 +645,7 @@ def plot_category_summary(summary: pd.DataFrame) -> None:
     # =========================
     # 图：各品类预测经营利润（3D柱状图）
     # =========================
-    import os
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
-    # 如果你前面已经设置过中文字体，这里可以不用重复写
-    plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
-    plt.rcParams['axes.unicode_minus'] = False
-
-    # ===== 这里的数据来源保持和你原来一致 =====
-    # 如果你前面已经有 summary，就直接用 summary
-    # 需要确保 summary 里有这两列：
-    # “品类” 和 “预测经营利润_元”
 
     cate_names = summary["品类"].astype(str).tolist()
     profits = summary["预测经营利润_元"].to_numpy(dtype=float)
